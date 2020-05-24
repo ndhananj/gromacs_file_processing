@@ -10,8 +10,14 @@ import matplotlib.pyplot as plt
 
 import re
 
+import os
+
 from biopandas.pdb import PandasPdb
 
+
+################################################################################
+# General functions
+################################################################################
 
 # Return the first two group matches for the first search string that matches
 #     It is assumed each search string produces two group matches
@@ -21,6 +27,9 @@ def return_2_match_groups(search_strings,string_to_search):
     fulls = [ (m.group(1), m.group(2)) for m in ms if m ]
     return fulls[:][0][:]
 
+################################################################################
+# xvg related functions
+################################################################################
 def process_xvg_params(params):
     search_strings = ['@(\w+)\s+(\w+)']
     search_strings.append('@\s+([\w\s]+)\s+\"(.+)\"')
@@ -48,3 +57,19 @@ def read_xvg(filename):
     data_dict = {k:v for (k,v) in data_pairs}
     df = pd.DataFrame(data=data_dict)
     return df
+
+################################################################################
+# Trajectory conversion functions
+################################################################################
+
+def convert_gro_to_pdb(file_prefix):
+    gro_file = file_prefix+'.gro'
+    pdb_file = file_prefix+'.pdb'
+    cmd = "echo '0' | gmx trjconv -f "+gro_file+' -s '+gro_file+' -o '+pdb_file
+    os.system(cmd)
+
+def get_frames_from_trj(trj_file, struct_file, beg, end, step, out_prefix):
+    cmd = "echo '0' | gmx trjconv -f "+trj_file+" -s "+struct_file+" -b "+\
+        str(beg)+ " -e "+str(end)+" -dt "+\
+        str(step)+" -sep -o "+out_prefix+".pdb"
+    os.system(cmd)
