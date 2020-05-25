@@ -89,3 +89,9 @@ def get_frames_from_trj(trj_file, struct_file, beg, end, step, out_prefix):
         str(beg)+ " -e "+str(end)+" -dt "+\
         str(step)+" -sep -o "+out_prefix+".pdb"
     os.system(cmd)
+
+def extract_position_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
+    output_file):
+    cmd = "echo "+str(ndx)+" | gmx trajectory -f "+trj_file+" -s "+struct_file+\
+        ' -n '+ndx_file+' -ox '+output_file
+    os.system(cmd)
