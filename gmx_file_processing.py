@@ -112,3 +112,18 @@ def extract_position_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
     cmd = "echo "+str(ndx)+" | gmx trajectory -f "+trj_file+" -s "+struct_file+\
         ' -n '+ndx_file+' -ox '+output_file
     os.system(cmd)
+
+################################################################################
+# Simulation functions
+################################################################################
+
+#These functions assume the forfield is set up to be available in directories
+
+def grompp(mdp_file,init_struct_file,top_file,ndx_file,output_file):
+    cmd = 'gmx grompp -f '+mdp_file+' -c '+init_struct_file+ \
+        ' -p '+top_file+' -n '+ndx_file+' -o '+output_file
+    os.system(cmd)
+
+def mdrun(tpr_file,prefix):
+    cmd = 'gmx mdrun -s '+tpr_file+' -deffnm '+prefix
+    os.system(cmd)
