@@ -41,6 +41,7 @@ def process_xvg_params(params):
     return processed_params
 
 def read_xvg(filename):
+    # read and split data into parts
     f = open(filename, 'r+')
     lines = f.read().split("\n")
     num_lines = len(lines)
@@ -49,12 +50,27 @@ def read_xvg(filename):
     data = [lines[i].split() \
         for i in range(num_lines-1) if lines[i][0] not in ['@','#']]
     data_array = np.array(data).astype(np.float)
+    # process and interpret the parts
+    num_y_data_cols = data_array.shape[1]-1
     processed_params = process_xvg_params(params)
     y_labels = processed_params['yaxis  label']
+    # use labels to place the data into a data frame
     num_y_labels = len(y_labels)
+    num_new_labels = num_y_data_cols-num_y_labels
+    if(num_new_labels>0): # if there aren't enough labels
+        print("Extending labels to "+str(num_y_data_cols)+" ...")
+        new_labels = [y_labels[-1]+"_"+str(i) for i in range(num_new_labels)]
+        y_labels.extend(new_labels)
+        print(y_labels)
+    num_y_labels = len(y_labels)
+    # create dictionary to make data frame
+    # start with y labels
     data_pairs = [(y_labels[i], data_array[:,i+1]) for i in range(num_y_labels)]
+    # add the x label
     data_pairs.insert(0,(processed_params['xaxis  label'],data_array[:,0]))
+    # turn intoa dictionary
     data_dict = {k:v for (k,v) in data_pairs}
+    # turn into a data frame
     df = pd.DataFrame(data=data_dict)
     return df
 
