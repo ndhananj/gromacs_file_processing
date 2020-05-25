@@ -17,8 +17,8 @@ def calcWork1D_Trap(x,f):
 if __name__ == '__main__':
     dist_file = sys.argv[1]
     force_file = sys.argv[2]
-    dist_df = read_xvg(dist_file)
-    force_df = read_xvg(force_file)
+    dist_df = read_xvg(dist_file)['data']
+    force_df = read_xvg(force_file)['data']
     if(checkTimeMatch(dist_df,force_df)):
        print("The Time axes match")
        x = dist_df[['Position (nm)']].to_numpy()

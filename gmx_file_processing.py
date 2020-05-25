@@ -67,12 +67,20 @@ def read_xvg(filename):
     # start with y labels
     data_pairs = [(y_labels[i], data_array[:,i+1]) for i in range(num_y_labels)]
     # add the x label
-    data_pairs.insert(0,(processed_params['xaxis  label'],data_array[:,0]))
+    x_label = processed_params['xaxis  label']
+    data_pairs.insert(0,(x_label,data_array[:,0]))
     # turn intoa dictionary
     data_dict = {k:v for (k,v) in data_pairs}
     # turn into a data frame
     df = pd.DataFrame(data=data_dict)
-    return df
+    return {'data':df, 'xaxis label':x_label, 'yaxis labels':y_labels}
+
+# assuming an xvg with an x_label and the rest as num_y_labels
+# The input is the return value from reading the xvg
+# returns a vector as numpy array of the average y_label values
+def xvg_ylabel_avg(xvg_data):
+    return xvg_data['data'][xvg_data['yaxis labels']].mean(axis=0)
+
 
 ################################################################################
 # Trajectory conversion functions
