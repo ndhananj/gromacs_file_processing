@@ -75,12 +75,21 @@ def read_xvg(filename):
     df = pd.DataFrame(data=data_dict)
     return {'data':df, 'xaxis label':x_label, 'yaxis labels':y_labels}
 
+########
 # assuming an xvg with an x_label and the rest as num_y_labels
 # The input is the return value from reading the xvg
-# returns a vector as numpy array of the average y_label values
+
+# returns  the average y_label values
 def xvg_ylabel_avg(xvg_data):
     return xvg_data['data'][xvg_data['yaxis labels']].mean(axis=0)
 
+# returns the first y_label values
+def xvg_ylabel_first(xvg_data):
+    return xvg_data['data'][xvg_data['yaxis labels']].iloc[0]
+
+# returns the avg shift from first y_label values
+def xvg_ylabel_shift(xvg_data):
+    return xvg_ylabel_avg(xvg_data) - xvg_ylabel_first(xvg_data)
 
 ################################################################################
 # Trajectory conversion functions
