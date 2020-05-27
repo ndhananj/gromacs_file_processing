@@ -186,6 +186,13 @@ def interpret_itp_comment_parts(parts):
     semicol_idx.append(None)
     return parts[semicol_idx[0]+1:semicol_idx[1]]
 
+# create a dictionary from headers and sections
+def link_itp_sections_headers(headers,header_range,sections):
+    section_for_header = {headers[j]:[] for j in header_range}
+    for j in header_range:
+        section_for_header[headers[j]].append(sections[j])
+    return section_for_header
+
 def read_itp(filename):
     # read and split data into parts
     f = open(filename, 'r+')
@@ -234,9 +241,8 @@ def read_itp(filename):
     sec_cols = apply_func_lines_in_sections(f,section_comments)
     section_parts = split_lines_in_sections(filtered_secs)
     sections = make_df_from_sec_cols_parts(sec_cols,section_parts)
-    section_for_header = {headers[j]:[] for j in header_range}
-    for j in header_range:
-        section_for_header[headers[j]].append(sections[j])
+    section_for_header = \
+        link_itp_sections_headers(headers,header_range,sections)
     return {'meta':sections_meta_df, **section_for_header, \
         'comments':comments_df, 'ifdef_lines':ifdef_df, 'endif_lines':endif_df,\
         'num_lines':num_lines}
@@ -304,6 +310,8 @@ def renumber_itp(itp_dict,sections,kept_sections):
        {orig_atom_numbers[i]:i+1 for i in range(len(orig_atom_numbers))}
     relevant_cols, headers, relevant_headers, cols, nested_secs, \
         sections, retrieved_cols = retrive_atom_relevant_itp(itp_dict)
+#    for i in range(len(relevant_headers)):
+
     #return itp_dict
 
 # remove atoms (identified by number) from processed data structure
@@ -321,9 +329,8 @@ def remove_itp_atoms(itp_dict, atoms_to_remove):
     kept_sections = [sections[i][np.invert(marked_sections[i])] \
         for i in range(len(sections))]
     header_range = range(len(relevant_headers))
-    section_for_header = {relevant_headers[j]:[] for j in header_range}
-    for j in header_range:
-        section_for_header[relevant_headers[j]].append(kept_sections[j])
+    section_for_header=\
+        link_itp_sections_headers(relevant_headers,header_range,kept_sections)
     for h in relevant_headers:
         itp_dict[h]=section_for_header[h]
     renumber_itp(itp_dict,sections,kept_sections)
