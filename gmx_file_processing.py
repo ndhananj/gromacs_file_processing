@@ -278,6 +278,36 @@ def write_itp(itp_dict,filename):
     to_write.to_csv(filename,header=False,index=False,quotechar=" ")
     return to_write
 
+# retrieve itp cols
+def retreive_itp_col(itp_dict,header,idx,col):
+    return itp_dict[header][idx][col].to_numpy().astype(int)
+
 # remove atoms (identified by number) from processed data structure
-def remove_atoms(itp_dict, atoms_to_remove):
+def remove_itp_atoms(itp_dict, atoms_to_remove):
+    relevant_cols={'atoms':['nr'], 'bonds':['ai','aj'], 'pairs':['ai','aj'], \
+        'angles':['ai','aj','ak'], 'dihedrals':['ai','aj','ak','al'], \
+        'position_restraints':['atom']}
+    headers = itp_dict['meta']['headers'].to_numpy()
+    relevant_headers = [h for h in headers if h in relevant_cols.keys()]
+    cols = [ relevant_cols[h] for h in relevant_headers]
+    nested_secs = splice_by_idx_list(itp_dict,relevant_headers)
+    sections = concatenate_lists(nested_secs)
+    retreived_cols = [ [sections[i][col].to_numpy().astype(int) \
+        for col in cols[i]] for i in range(len(sections))]
+    marking_func = \
+        lambda col : np.any(np.array([col==a for a in atoms_to_remove]),axis=0)
+    marked_cols = \
+       [ [marking_func(col) for col in sec] for sec in retreived_cols]
+    print([[col.shape for col in cols] for cols in marked_cols])
+    agg_func = lambda sec : np.any(np.array([cols for cols in sec]),axis=0)
+    marked_sections = [ agg_func(sec) for sec in marked_cols]
+    print([len(col) for col in marked_sections])
+    kept_sections = [sections[i][np.invert(marked_sections[i])] \
+        for i in range(len(sections))]
+    header_range = range(len(relevant_headers))
+    section_for_header = {relevant_headers[j]:[] for j in header_range}
+    for j in header_range:
+        section_for_header[relevant_headers[j]].append(kept_sections[j])
+    for h in relevant_headers:
+        itp_dict[h]=section_for_header[h]
     return itp_dict
