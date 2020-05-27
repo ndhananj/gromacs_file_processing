@@ -303,6 +303,15 @@ def retrive_atom_relevant_itp(itp_dict):
     return relevant_cols, headers, relevant_headers, cols, nested_secs, \
         sections, retrieved_cols
 
+# replace relevant headers
+def replace_relavent_sections(itp_dict,relevant_headers,new_secs):
+    header_range = range(len(relevant_headers))
+    section_for_header=\
+        link_itp_sections_headers(relevant_headers,header_range,new_secs)
+    for h in relevant_headers:
+        itp_dict[h]=section_for_header[h]
+    return itp_dict
+
 # renumber a raw removal of atoms
 def renumber_itp(itp_dict,sections,kept_sections):
     orig_atom_numbers = itp_dict['atoms'][0]['nr'].to_numpy()
@@ -310,7 +319,7 @@ def renumber_itp(itp_dict,sections,kept_sections):
        {orig_atom_numbers[i]:i+1 for i in range(len(orig_atom_numbers))}
     relevant_cols, headers, relevant_headers, cols, nested_secs, \
         sections, retrieved_cols = retrive_atom_relevant_itp(itp_dict)
-#    for i in range(len(relevant_headers)):
+#    header_range= range(len(relevant_headers))
 
     #return itp_dict
 
@@ -328,10 +337,12 @@ def remove_itp_atoms(itp_dict, atoms_to_remove):
     print([len(col) for col in marked_sections])
     kept_sections = [sections[i][np.invert(marked_sections[i])] \
         for i in range(len(sections))]
-    header_range = range(len(relevant_headers))
-    section_for_header=\
-        link_itp_sections_headers(relevant_headers,header_range,kept_sections)
-    for h in relevant_headers:
-        itp_dict[h]=section_for_header[h]
+#    header_range = range(len(relevant_headers))
+#    section_for_header=\
+#        link_itp_sections_headers(relevant_headers,header_range,kept_sections)
+#    for h in relevant_headers:
+#        itp_dict[h]=section_for_header[h]
+    itp_dict = \
+        replace_relavent_sections(itp_dict,relevant_headers,kept_sections)
     renumber_itp(itp_dict,sections,kept_sections)
     return itp_dict
