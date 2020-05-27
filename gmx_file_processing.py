@@ -29,7 +29,9 @@ def return_2_match_groups(search_strings,string_to_search):
 
 # splice by list
 def splice_by_idx_list(to_splice,splice_with):
-    return [to_splice[i] for i in splice_with]
+    indeces = np.unique(splice_with,return_index=True)[1]
+    idx_list = [splice_with[index] for index in sorted(indeces)]
+    return [to_splice[i] for i in idx_list]
 
 # take in lines that are sperated into sections and apply a function to it
 def apply_func_lines_in_sections(f,secs):
@@ -64,6 +66,14 @@ def join_rows_df(df):
 # join the rows of all DataFrames in a list
 def join_rows_df_list(dfl):
     return [ join_rows_df(df) for df in dfl]
+
+# join the rows of all DataFrames in a 2D list
+def join_rows_df_list_2D(dfl):
+    return [ join_rows_df_list(df) for df in dfl]
+
+# concatenate lists
+def concatenate_lists(l):
+    return [item for sublist in l for item in sublist]
 
 ################################################################################
 # xvg related functions
@@ -223,7 +233,9 @@ def read_itp(filename):
     sec_cols = apply_func_lines_in_sections(f,section_comments)
     section_parts = split_lines_in_sections(filtered_secs)
     sections = make_df_from_sec_cols_parts(sec_cols,section_parts)
-    sections_df = {headers[j]:sections[j] for j in header_range}
+    section_for_header = {headers[j]:[] for j in header_range}
+    for j in header_range:
+        section_for_header[headers[j]].append(sections[j])
     return {'meta':sections_meta_df, **section_for_header, \
         'comments':comments_df, 'ifdef_lines':ifdef_df, 'endif_lines':endif_df,\
         'num_lines':num_lines}
@@ -236,7 +248,8 @@ def write_itp(itp_dict,filename):
     comments = itp_dict['comments'].to_numpy()
     ifdef_lines = itp_dict['ifdef_lines']['line'].to_numpy()
     endif_lines = itp_dict['endif_lines']['line'].to_numpy()
-    sections=join_rows_df_list(splice_by_idx_list(itp_dict,headers))
+    nested_secs=join_rows_df_list_2D(splice_by_idx_list(itp_dict,headers))
+    sections = concatenate_lists(nested_secs)
     #get indeces
     starts = itp_dict['meta']['header_starts'].to_numpy()
     sec_starts = starts+2
