@@ -27,6 +27,44 @@ def return_2_match_groups(search_strings,string_to_search):
     fulls = [ (m.group(1), m.group(2)) for m in ms if m ]
     return fulls[:][0][:]
 
+# splice by list
+def splice_by_idx_list(to_splice,splice_with):
+    return [to_splice[i] for i in splice_with]
+
+# take in lines that are sperated into sections and apply a function to it
+def apply_func_lines_in_sections(f,secs):
+    return [[f(line) for line in sec] for sec in secs]
+
+# take in lines that are seperated into sections and split those lines
+def split_lines_in_sections(secs):
+    return apply_func_lines_in_sections(lambda line:line.split(),secs)
+
+# given a set of data and columns, "harmonize" colums to the data
+def harmonized_data_columns(data,cols):
+    np_data = np.array(data)
+    np_cols = np.array(cols).flatten()
+    num_cols = np_data.shape[1]
+    diff = num_cols-np_cols.shape[0]
+    return np.pad(np_cols,diff)[diff:] if diff>0 else np_cols[:num_cols]
+
+# wrapper to make data drame with data and parts using our defaults
+def make_df_from_data_cols(data,cols):
+    return pd.DataFrame(data=data,columns=harmonized_data_columns(data,cols))
+
+# make a data frame from section columns and section section_parts
+def make_df_from_sec_cols_parts(section_cols,section_parts):
+    sections_range = range(len(section_cols))
+    f = lambda i : make_df_from_data_cols(section_parts[i],section_cols[i])
+    return [f(i) for i in sections_range]
+
+# join the rows of a DataFrame
+def join_rows_df(df):
+    return df.apply(lambda s: "    ".join(s),axis=1)
+
+# join the rows of all DataFrames in a list
+def join_rows_df_list(dfl):
+    return [ join_rows_df(df) for df in dfl]
+
 ################################################################################
 # xvg related functions
 ################################################################################
@@ -117,7 +155,7 @@ def extract_position_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
 # Simulation functions
 ################################################################################
 
-#These functions assume the forfield is set up to be available in directories
+#These functions assume the forcefield is set up to be available in directories
 
 def grompp(mdp_file,init_struct_file,top_file,ndx_file,output_file):
     cmd = 'gmx grompp -f '+mdp_file+' -c '+init_struct_file+ \
@@ -127,3 +165,99 @@ def grompp(mdp_file,init_struct_file,top_file,ndx_file,output_file):
 def mdrun(tpr_file,prefix):
     cmd = 'gmx mdrun -s '+tpr_file+' -deffnm '+prefix
     os.system(cmd)
+
+################################################################################
+# Forcefield and Topology related functions
+################################################################################
+# assumes there is at least 1 semicolon
+def interpret_itp_comment_parts(parts):
+    semicol_idx = [i for i in range(len(parts)) if parts[i]==';']
+    semicol_idx.append(None)
+    return parts[semicol_idx[0]+1:semicol_idx[1]]
+
+def read_itp(filename):
+    # read and split data into parts
+    f = open(filename, 'r+')
+    # get lines
+    lines = f.read().split("\n")
+    num_lines = len(lines)
+    lines_range = range(num_lines)
+    # find the headers
+    header_re = re.compile('\[\s*(.*?)\s*\]')
+    header_lines = [i for i in lines_range if header_re.match(lines[i])]
+    headers = [header_re.match(lines[i]).group(1) for i in header_lines]
+    num_headers = len(headers)
+    header_range = range(num_headers)
+    # Find the #ifdef or #endif section
+    ifdef_re = re.compile('\#ifdef\s+([\w\_]+)')
+    endif_re = re.compile('\#endif')
+    ifdef_lines = [i for i in lines_range if ifdef_re.match(lines[i])]
+    endif_lines = [i for i in lines_range if endif_re.match(lines[i])]
+    ifdef_line_data = splice_by_idx_list(lines,ifdef_lines)
+    endif_line_data = splice_by_idx_list(lines,endif_lines)
+    ifdef_df = pd.DataFrame({'line_number':ifdef_lines,'line':ifdef_line_data})
+    endif_df = pd.DataFrame({'line_number':endif_lines,'line':endif_line_data})
+    # use headers to find sections
+    end_func = lambda j: header_lines[j+1] if j+1 <num_headers else -1
+    start_func = lambda j: header_lines[j]+1
+    ends = [end_func(j) for j in header_range]
+    starts = [start_func(j) for j in header_range]
+    sections_meta_df = pd.DataFrame(\
+       data={'headers':headers,'header_starts':starts,'header_ends':ends})
+    # process sections
+    raw_sections = [lines[starts[j]:ends[j]] for j in header_range]
+    comment_line_re = re.compile('^\s*\;')
+    blank_re = re.compile('^\s*$')
+    to_ignore = [blank_re,ifdef_re,endif_re, comment_line_re]
+    should_ignore = lambda line : np.any([e.match(line) for e in to_ignore])
+    filter_sec = lambda sec : [line for line in sec if not(should_ignore(line))]
+    filtered_secs = [ filter_sec(sec) for sec in raw_sections]
+    # get the comment lines for each section
+    should_include = lambda line : comment_line_re.match(line)
+    sec_comments = lambda sec : [line for line in sec if should_include(line)]
+    section_comment_lines = [ sec_comments(sec) for sec in raw_sections]
+    section_comments = split_lines_in_sections(section_comment_lines)
+    comments_df = pd.DataFrame(data={'comments':section_comment_lines})
+    # put section information into data frames
+    f = interpret_itp_comment_parts
+    sec_cols = apply_func_lines_in_sections(f,section_comments)
+    section_parts = split_lines_in_sections(filtered_secs)
+    sections = make_df_from_sec_cols_parts(sec_cols,section_parts)
+    sections_df = {headers[j]:sections[j] for j in header_range}
+    return {'meta':sections_meta_df, **section_for_header, \
+        'comments':comments_df, 'ifdef_lines':ifdef_df, 'endif_lines':endif_df,\
+        'num_lines':num_lines}
+
+def write_itp(itp_dict,filename):
+    # set up output data structure
+    lines = pd.DataFrame(columns=range(itp_dict['num_lines']),index=[0])
+    # get data
+    headers = itp_dict['meta']['headers'].to_numpy()
+    comments = itp_dict['comments'].to_numpy()
+    ifdef_lines = itp_dict['ifdef_lines']['line'].to_numpy()
+    endif_lines = itp_dict['endif_lines']['line'].to_numpy()
+    sections=join_rows_df_list(splice_by_idx_list(itp_dict,headers))
+    #get indeces
+    starts = itp_dict['meta']['header_starts'].to_numpy()
+    sec_starts = starts+2
+    ends = itp_dict['meta']['header_ends'].to_numpy()
+    num_sections = ends.shape[0]
+    ends[num_sections-1]=itp_dict['num_lines']
+    sec_ends = \
+        [sec_starts[i]+sections[i].shape[0]-1 for i in range(num_sections)]
+    true_sec_ends = np.min(np.stack([sec_ends,ends]),axis=0)
+    sec_limits = np.stack([sec_starts,true_sec_ends])
+    sec_ranges = [range(sec_limits[0,i], sec_limits[1,i]+1) \
+        for i in range(num_sections)]
+    ifdef_lns = itp_dict['ifdef_lines']['line_number'].to_numpy()
+    endif_lns = itp_dict['endif_lines']['line_number'].to_numpy()
+    # assign data into output data structure
+    lines[starts]  = ['[ '+h+' ]' for h in headers]
+    lines[starts+1] = [c[0] for c in comments.T]
+    lines[ifdef_lns] = "    ".join(ifdef_lines)
+    lines[endif_lns] = "    ".join(endif_lines)
+    for i in range(num_sections):
+        lines[[j for j in sec_ranges[i]]] = sections[i].to_numpy()
+    to_write = lines.T.fillna('')
+    to_write.to_csv(filename)
+    return to_write

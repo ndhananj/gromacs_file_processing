@@ -48,7 +48,7 @@ def process_pmf_data(prefix,numFrames,ndx_file,ndx,k):
         shifts_list.append(xvg_ylabel_shift(data))
     x = pd.concat(pos_list, axis=1).T.to_numpy()
     delta_x = pd.concat(shifts_list, axis=1).T.to_numpy()
-    f = -delta_x*k
+    f = delta_x*k # sign is positive because of Newton's 3rd law and Hooke's
     return calcWork3D_Trap(x,f)
 
 
