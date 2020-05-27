@@ -279,11 +279,11 @@ def write_itp(itp_dict,filename):
     return to_write
 
 # retrieve itp cols
-def retreive_itp_col(itp_dict,header,idx,col):
+def retrieve_itp_col(itp_dict,header,idx,col):
     return itp_dict[header][idx][col].to_numpy().astype(int)
 
-# remove atoms (identified by number) from processed data structure
-def remove_itp_atoms(itp_dict, atoms_to_remove):
+# retrieve atom relevant cols and other data
+def retrive_atom_relevant_itp(itp_dict):
     relevant_cols={'atoms':['nr'], 'bonds':['ai','aj'], 'pairs':['ai','aj'], \
         'angles':['ai','aj','ak'], 'dihedrals':['ai','aj','ak','al'], \
         'position_restraints':['atom']}
@@ -292,12 +292,28 @@ def remove_itp_atoms(itp_dict, atoms_to_remove):
     cols = [ relevant_cols[h] for h in relevant_headers]
     nested_secs = splice_by_idx_list(itp_dict,relevant_headers)
     sections = concatenate_lists(nested_secs)
-    retreived_cols = [ [sections[i][col].to_numpy().astype(int) \
+    retrieved_cols = [ [sections[i][col].to_numpy().astype(int) \
         for col in cols[i]] for i in range(len(sections))]
+    return relevant_cols, headers, relevant_headers, cols, nested_secs, \
+        sections, retrieved_cols
+
+# renumber a raw removal of atoms
+def renumber_itp(itp_dict,sections,kept_sections):
+    orig_atom_numbers = itp_dict['atoms'][0]['nr'].to_numpy()
+    new_atom_numbers = \
+       {orig_atom_numbers[i]:i+1 for i in range(len(orig_atom_numbers))}
+    relevant_cols, headers, relevant_headers, cols, nested_secs, \
+        sections, retrieved_cols = retrive_atom_relevant_itp(itp_dict)
+    #return itp_dict
+
+# remove atoms (identified by number) from processed data structure
+def remove_itp_atoms(itp_dict, atoms_to_remove):
+    relevant_cols, headers, relevant_headers, cols, nested_secs, \
+        sections, retrieved_cols = retrive_atom_relevant_itp(itp_dict)
     marking_func = \
         lambda col : np.any(np.array([col==a for a in atoms_to_remove]),axis=0)
     marked_cols = \
-       [ [marking_func(col) for col in sec] for sec in retreived_cols]
+       [ [marking_func(col) for col in sec] for sec in retrieved_cols]
     print([[col.shape for col in cols] for cols in marked_cols])
     agg_func = lambda sec : np.any(np.array([cols for cols in sec]),axis=0)
     marked_sections = [ agg_func(sec) for sec in marked_cols]
@@ -310,4 +326,5 @@ def remove_itp_atoms(itp_dict, atoms_to_remove):
         section_for_header[relevant_headers[j]].append(kept_sections[j])
     for h in relevant_headers:
         itp_dict[h]=section_for_header[h]
+    renumber_itp(itp_dict,sections,kept_sections)
     return itp_dict
