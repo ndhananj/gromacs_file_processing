@@ -4,6 +4,7 @@
 ################################################################################
 
 import sys
+import csv
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -245,7 +246,8 @@ def write_itp(itp_dict,filename):
     lines = pd.DataFrame(columns=range(itp_dict['num_lines']),index=[0])
     # get data
     headers = itp_dict['meta']['headers'].to_numpy()
-    comments = itp_dict['comments'].to_numpy()
+    comment_list = itp_dict['comments']['comments'].to_list()
+    comments = ["".join(c) for c in comment_list]
     ifdef_lines = itp_dict['ifdef_lines']['line'].to_numpy()
     endif_lines = itp_dict['endif_lines']['line'].to_numpy()
     nested_secs=join_rows_df_list_2D(splice_by_idx_list(itp_dict,headers))
@@ -266,11 +268,16 @@ def write_itp(itp_dict,filename):
     endif_lns = itp_dict['endif_lines']['line_number'].to_numpy()
     # assign data into output data structure
     lines[starts]  = ['[ '+h+' ]' for h in headers]
-    lines[starts+1] = [c[0] for c in comments.T]
+    print(comments)
+    lines[starts+1] = comments
     lines[ifdef_lns] = "    ".join(ifdef_lines)
     lines[endif_lns] = "    ".join(endif_lines)
     for i in range(num_sections):
         lines[[j for j in sec_ranges[i]]] = sections[i].to_numpy()
     to_write = lines.T.fillna(' ')
-    to_write.to_csv(filename,header=False,index=False)
+    to_write.to_csv(filename,header=False,index=False,quotechar=" ")
     return to_write
+
+# remove atoms (identified by number) from processed data structure
+def remove_atoms(itp_dict, atoms_to_remove):
+    return itp_dict
