@@ -271,6 +271,6 @@ def write_itp(itp_dict,filename):
     lines[endif_lns] = "    ".join(endif_lines)
     for i in range(num_sections):
         lines[[j for j in sec_ranges[i]]] = sections[i].to_numpy()
-    to_write = lines.T.fillna('')
-    to_write.to_csv(filename)
+    to_write = lines.T.fillna(' ')
+    to_write.to_csv(filename,header=False,index=False)
     return to_write
