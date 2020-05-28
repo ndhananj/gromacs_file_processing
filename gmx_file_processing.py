@@ -326,6 +326,17 @@ def change_itp_cols_in_sections(col_f,agg_f,retrieved_cols):
 def get_itp_sections_to_store(sections, changed_sections, f):
     return [f(sections,changed_sections,i) for i in range(len(sections))]
 
+# return section with col replaced
+def get_itp_replaces_section(cols,sec,csec,i):
+    print(i)
+    print(type(csec[i]))
+    print(type(sec[i]))
+    print(len(cols[i]))
+    csec_df = pd.DataFrame(data=csec[i],columns=cols[i])
+    print(csec_df)
+    print(sec[i].loc[:,cols[i]])
+    sec[i].loc[:,cols[i]] = csec_df.loc[:,cols[i]].copy()
+    return sec[i]
 
 # renumber a raw removal of atoms
 def renumber_itp(itp_dict):
@@ -340,9 +351,13 @@ def renumber_itp(itp_dict):
     agg_f = lambda sec: np.stack(sec).T
     renumbered_cols, renumbered_secs = \
        change_itp_cols_in_sections(col_f,agg_f,retrieved_cols)
-
-    print([sec.shape for sec in renumbered_secs])
-    #return itp_dict
+    print(cols)
+    renumber_f = lambda sec, csec, i: get_itp_replaces_section(cols,sec,csec,i)
+    renumbered_sections = \
+        get_itp_sections_to_store(sections, renumbered_secs, renumber_f)
+    itp_dict = \
+        replace_relavent_sections(itp_dict,relevant_headers,renumbered_sections)
+    return itp_dict
 
 # remove atoms (identified by number) from processed data structure
 def remove_itp_atoms(itp_dict, atoms_to_remove):
@@ -357,5 +372,4 @@ def remove_itp_atoms(itp_dict, atoms_to_remove):
     kept_sections = get_itp_sections_to_store(sections, marked_sections, keep_f)
     itp_dict = \
         replace_relavent_sections(itp_dict,relevant_headers,kept_sections)
-    renumber_itp(itp_dict)
-    return itp_dict
+    return renumber_itp(itp_dict)
