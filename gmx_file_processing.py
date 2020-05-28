@@ -314,21 +314,33 @@ def replace_relavent_sections(itp_dict,relevant_headers,new_secs):
 
 # apply column_func on columns and agregation function to make sections
 def change_itp_cols_in_sections(col_f,agg_f,retrieved_cols):
+    print([[col.dtype for col in cols ] for cols in retrieved_cols])
     changed_cols = [ [col_f(col) for col in sec] for sec in retrieved_cols]
+    print([[col.dtype for col in cols] for cols in changed_cols])
     print([[col.shape for col in cols] for cols in changed_cols])
     changed_sections = [ agg_f(sec) for sec in changed_cols]
     print([len(col) for col in changed_sections])
     return changed_cols, changed_sections
 
+# take original sections and changed sections to produce full sections to store
+def get_itp_sections_to_store(sections, changed_sections, f):
+    return [sections[i][f(changed_sections[i])] for i in range(len(sections))]
+
+
 # renumber a raw removal of atoms
-def renumber_itp(itp_dict,sections,kept_sections):
-    orig_atom_numbers = itp_dict['atoms'][0]['nr'].to_numpy()
+def renumber_itp(itp_dict):
+    orig_atom_numbers = itp_dict['atoms'][0]['nr'].to_numpy().astype(int)
     new_atom_numbers = \
        {orig_atom_numbers[i]:i+1 for i in range(len(orig_atom_numbers))}
     relevant_cols, headers, relevant_headers, cols, nested_secs, \
         sections, retrieved_cols = retrive_atom_relevant_itp(itp_dict)
-
-    #renumbered_cols = renumber_func
+    renumber = lambda x: new_atom_numbers[x] \
+        if x in new_atom_numbers.keys() else x
+    col_f = np.vectorize(renumber)
+    agg_f = lambda sec: np.stack(sec).T
+    renumbered_cols, renumbered_secs = \
+       change_itp_cols_in_sections(col_f,agg_f,retrieved_cols)
+    print([sec.shape for sec in renumbered_secs])
     #return itp_dict
 
 # remove atoms (identified by number) from processed data structure
@@ -340,9 +352,9 @@ def remove_itp_atoms(itp_dict, atoms_to_remove):
     agg_func = lambda sec : np.any(np.array([cols for cols in sec]),axis=0)
     marked_cols, marked_sections = \
         change_itp_cols_in_sections(marking_func,agg_func,retrieved_cols)
-    kept_sections = [sections[i][np.invert(marked_sections[i])] \
-        for i in range(len(sections))]
+    keep_f = np.invert
+    kept_sections = get_itp_sections_to_store(sections, marked_sections, keep_f)
     itp_dict = \
         replace_relavent_sections(itp_dict,relevant_headers,kept_sections)
-    renumber_itp(itp_dict,sections,kept_sections)
+    renumber_itp(itp_dict)
     return itp_dict
