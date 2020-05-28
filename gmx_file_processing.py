@@ -62,7 +62,7 @@ def make_df_from_sec_cols_parts(section_cols,section_parts):
 
 # join the rows of a DataFrame
 def join_rows_df(df):
-    return df.apply(lambda s: "    ".join(s),axis=1)
+    return df.astype(str).apply(lambda s: "    ".join(s),axis=1)
 
 # join the rows of all DataFrames in a list
 def join_rows_df_list(dfl):
@@ -256,7 +256,8 @@ def write_itp(itp_dict,filename):
     comments = ["".join(c) for c in comment_list]
     ifdef_lines = itp_dict['ifdef_lines']['line'].to_numpy()
     endif_lines = itp_dict['endif_lines']['line'].to_numpy()
-    nested_secs=join_rows_df_list_2D(splice_by_idx_list(itp_dict,headers))
+    spliced_secs = splice_by_idx_list(itp_dict,headers)
+    nested_secs=join_rows_df_list_2D(spliced_secs)
     sections = concatenate_lists(nested_secs)
     #get indeces
     starts = itp_dict['meta']['header_starts'].to_numpy()
@@ -274,7 +275,6 @@ def write_itp(itp_dict,filename):
     endif_lns = itp_dict['endif_lines']['line_number'].to_numpy()
     # assign data into output data structure
     lines[starts]  = ['[ '+h+' ]' for h in headers]
-    print(comments)
     lines[starts+1] = comments
     lines[ifdef_lns] = "    ".join(ifdef_lines)
     lines[endif_lns] = "    ".join(endif_lines)
@@ -314,12 +314,8 @@ def replace_relavent_sections(itp_dict,relevant_headers,new_secs):
 
 # apply column_func on columns and agregation function to make sections
 def change_itp_cols_in_sections(col_f,agg_f,retrieved_cols):
-    print([[col.dtype for col in cols ] for cols in retrieved_cols])
     changed_cols = [ [col_f(col) for col in sec] for sec in retrieved_cols]
-    print([[col.dtype for col in cols] for cols in changed_cols])
-    print([[col.shape for col in cols] for cols in changed_cols])
     changed_sections = [ agg_f(sec) for sec in changed_cols]
-    print([len(col) for col in changed_sections])
     return changed_cols, changed_sections
 
 # take original sections and changed sections to produce full sections to store
@@ -327,37 +323,12 @@ def get_itp_sections_to_store(sections, changed_sections, f):
     return [f(sections,changed_sections,i) for i in range(len(sections))]
 
 # return section with col replaced
-def get_itp_replaces_section(cols,sec,csec,i):
-    print(i)
-    print(type(csec[i]))
-    print(type(sec[i]))
-    print(len(cols[i]))
+def get_itp_replaced_section(cols,sec,csec,i):
     csec_df = pd.DataFrame(data=csec[i],columns=cols[i])
-    print(csec_df)
-    print(sec[i].loc[:,cols[i]])
+    sec[i]['new_idx'] = csec_df.index
+    sec[i]=sec[i].set_index('new_idx')
     sec[i].loc[:,cols[i]] = csec_df.loc[:,cols[i]].copy()
     return sec[i]
-
-# renumber a raw removal of atoms
-def renumber_itp(itp_dict):
-    orig_atom_numbers = itp_dict['atoms'][0]['nr'].to_numpy().astype(int)
-    new_atom_numbers = \
-       {orig_atom_numbers[i]:i+1 for i in range(len(orig_atom_numbers))}
-    relevant_cols, headers, relevant_headers, cols, nested_secs, \
-        sections, retrieved_cols = retrive_atom_relevant_itp(itp_dict)
-    renumber = lambda x: new_atom_numbers[x] \
-        if x in new_atom_numbers.keys() else x
-    col_f = np.vectorize(renumber)
-    agg_f = lambda sec: np.stack(sec).T
-    renumbered_cols, renumbered_secs = \
-       change_itp_cols_in_sections(col_f,agg_f,retrieved_cols)
-    print(cols)
-    renumber_f = lambda sec, csec, i: get_itp_replaces_section(cols,sec,csec,i)
-    renumbered_sections = \
-        get_itp_sections_to_store(sections, renumbered_secs, renumber_f)
-    itp_dict = \
-        replace_relavent_sections(itp_dict,relevant_headers,renumbered_sections)
-    return itp_dict
 
 # remove atoms (identified by number) from processed data structure
 def remove_itp_atoms(itp_dict, atoms_to_remove):
@@ -372,4 +343,22 @@ def remove_itp_atoms(itp_dict, atoms_to_remove):
     kept_sections = get_itp_sections_to_store(sections, marked_sections, keep_f)
     itp_dict = \
         replace_relavent_sections(itp_dict,relevant_headers,kept_sections)
-    return renumber_itp(itp_dict)
+    # renumber after
+    relevant_cols, headers, relevant_headers, cols, nested_secs, \
+        sections, retrieved_cols = retrive_atom_relevant_itp(itp_dict)
+    orig_atom_numbers = itp_dict['atoms'][0]['nr'].to_numpy().astype(int)
+    new_atom_numbers = \
+       {orig_atom_numbers[i]:i+1 for i in range(len(orig_atom_numbers))}
+    renumber = lambda x: new_atom_numbers[x] \
+        if x in new_atom_numbers.keys() else x
+    col_f = np.vectorize(renumber)
+    agg_f = lambda sec: np.stack(sec).T
+    renumbered_cols, renumbered_secs = \
+       change_itp_cols_in_sections(col_f,agg_f,retrieved_cols)
+    renumber_f = lambda sec, csec, i: \
+        get_itp_replaced_section(cols,sec,csec,i)
+    renumbered_sections = \
+        get_itp_sections_to_store(sections, renumbered_secs, renumber_f)
+    itp_dict = \
+        replace_relavent_sections(itp_dict,relevant_headers,renumbered_sections)
+    return itp_dict
