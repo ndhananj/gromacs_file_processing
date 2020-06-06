@@ -77,6 +77,19 @@ def concatenate_lists(l):
     return [item for sublist in l for item in sublist]
 
 ################################################################################
+# pdb related functions
+################################################################################
+# the input is a biopandas read and a set of atom ids
+def remove_pdb_atoms(pdb,atom_ids):
+    remove_set = set(atom_ids)
+    df = pdb.df['ATOM']
+    col = df['atom_number'].to_numpy().astype(int)
+    mark_f = np.vectorize(lambda x : x in remove_set)
+    mark = np.invert(mark_f(col))
+    pdb.df['ATOM'] = df[mark]
+    return pdb
+
+################################################################################
 # xvg related functions
 ################################################################################
 def process_xvg_params(params):
@@ -351,7 +364,8 @@ def remove_itp_atoms(itp_dict, atoms_to_remove):
        {orig_atom_numbers[i]:i+1 for i in range(len(orig_atom_numbers))}
     renumber = lambda x: new_atom_numbers[x] \
         if x in new_atom_numbers.keys() else x
-    col_f = np.vectorize(renumber)
+    col_fv = np.vectorize(renumber)
+    col_f = lambda col: col_fv(col) if col.shape[0]>0 else np.array([])
     agg_f = lambda sec: np.stack(sec).T
     renumbered_cols, renumbered_secs = \
        change_itp_cols_in_sections(col_f,agg_f,retrieved_cols)
