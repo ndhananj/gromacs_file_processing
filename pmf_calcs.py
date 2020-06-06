@@ -18,6 +18,8 @@ def gen_pmf_data(orig_trj,struct_file, beg, end, step,\
     start_files = [p+'.pdb' for p in prefixes]
     tpr_files = [p+'.tpr' for p in prefixes]
     result_prefixes = ['umbrella/'+p for p in prefixes]
+    trjs = [ p+'.xtc' for p in result_prefixes ]
+    xvgs = [ p+'.xvg' for p in result_prefixes ]
     os.makedirs('umbrella')
     for i in range(len(prefixes)):
         grompp(mdp_file,start_files[i],top_file,ndx_file,tpr_files[i])
