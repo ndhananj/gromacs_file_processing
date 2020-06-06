@@ -53,16 +53,18 @@ def process_pmf_data(prefix,numFrames,k):
     x = pd.concat(pos_list, axis=1).T.to_numpy()
     delta_x = pd.concat(shifts_list, axis=1).T.to_numpy()
     f = delta_x*k # sign is positive because of Newton's 3rd law and Hooke's
-    return calcWork3D_Trap(x,f)
+    return calcWork3D_Trap(x,f), x, f
 
 
 if __name__ == '__main__':
     prefix = sys.argv[1]
     numFrames = int(sys.argv[2])
     k = float(sys.argv[3])
-    data = process_pmf_data(prefix,numFrames,k)
+    data, x, f = process_pmf_data(prefix,numFrames,k)
     print(data)
-    fig = plt.figure()
+    print(x)
+    print(f)
+    fig = plt.figure(1)
     ax1 = fig.add_subplot(211)
     ax1.scatter('s','dW', data=data)
     plt.ylabel('dW (kJ/mol)')
@@ -70,4 +72,14 @@ if __name__ == '__main__':
     ax2.scatter('s','work', data=data)
     plt.xlabel('s (A)')
     plt.ylabel('work (kJ/mol)')
+    # Show 3D plots of figures
+    fig2 = plt.figure(2)
+    ax = fig2.add_subplot(111, projection='3d')
+    a=x*10
+    dx=(a[1:,:]-a[:-1,:])
+    ax.scatter(a[:,0], a[:,1], a[:,2],alpha=1)
+    ax.quiver(a[:-1,0], a[:-1,1], a[:-1,2],dx[:,0],dx[:,1],dx[:,2])
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
     plt.show()
