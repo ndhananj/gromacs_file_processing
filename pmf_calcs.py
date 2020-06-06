@@ -75,11 +75,13 @@ if __name__ == '__main__':
     # Show 3D plots of figures
     fig2 = plt.figure(2)
     ax = fig2.add_subplot(111, projection='3d')
-    a=x*10
+    a=x*10.0
     dx=(a[1:,:]-a[:-1,:])
     ax.scatter(a[:,0], a[:,1], a[:,2],alpha=1)
     ax.quiver(a[:-1,0], a[:-1,1], a[:-1,2],dx[:,0],dx[:,1],dx[:,2])
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+    b = 10.0*(f/k)
+    ax.quiver(a[:,0], a[:,1], a[:,2],b[:,0], b[:,1], b[:,2],color='r')
+    ax.set_xlabel('X(A)')
+    ax.set_ylabel('Y(A)')
+    ax.set_zlabel('Z(A)')
     plt.show()
