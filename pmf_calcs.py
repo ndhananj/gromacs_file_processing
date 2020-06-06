@@ -17,8 +17,8 @@ def gen_pmf_data(orig_trj,struct_file, beg, end, step,\
     prefixes = [out_prefix+str(i) for i in range(numFrames+1)]
     start_files = [p+'.pdb' for p in prefixes]
     tpr_files = [p+'.tpr' for p in prefixes]
-    result_prefixes = ['results/'+p for p in prefixes]
-    os.makedirs('results')
+    result_prefixes = ['umbrella/'+p for p in prefixes]
+    os.makedirs('umbrella')
     for i in range(len(prefixes)):
         grompp(mdp_file,start_files[i],top_file,ndx_file,tpr_files[i])
         mdrun(tpr_files[i],result_prefixes[i])
@@ -39,7 +39,7 @@ def calcWork3D_Trap(x,f):
 def process_pmf_data(prefix,numFrames,k):
     prefixes = [prefix+str(i) for i in range(numFrames+1)]
     start_files = [p+'.pdb' for p in prefixes]
-    result_prefixes = ['results/'+p for p in prefixes]
+    result_prefixes = ['umbrella/'+p for p in prefixes]
     trjs = [ p+'.xtc' for p in result_prefixes ]
     xvgs = [ p+'.xvg' for p in result_prefixes ]
     pos_list = []
