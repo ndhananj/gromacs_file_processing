@@ -29,7 +29,10 @@ def return_2_match_groups(search_strings,string_to_search):
     f=lambda x:re.search(x,string_to_search)
     ms=[f(x) for x in search_strings]
     fulls = [ (m.group(1), m.group(2)) for m in ms if m ]
-    return fulls[:][0][:]
+    if len(fulls[:])>0:
+        return fulls[:][0][:]
+    else:
+        return [None, None]
 
 # splice by list
 def splice_by_idx_list(to_splice,splice_with):
@@ -173,9 +176,11 @@ def get_frames_from_trj(trj_file, struct_file, beg, end, step, out_prefix):
     os.system(cmd)
 
 def extract_position_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
-    output_file):
+    output_file, beg=None, end=None, dt=None):
     cmd = "echo "+str(ndx)+" | gmx trajectory -f "+trj_file+" -s "+struct_file+\
         ' -n '+ndx_file+' -ox '+output_file
+    if (beg is not None) and (end is not None) and (dt is not None) :
+        cmd+=' -b '+beg+' -e '+end+' -dt '+dt
     os.system(cmd)
 
 ################################################################################
