@@ -55,6 +55,28 @@ def process_pmf_data(prefix,numFrames,k):
     f = delta_x*k # sign is positive because of Newton's 3rd law and Hooke's
     return calcWork3D_Trap(x,f), x, f
 
+def workBasedOnForceMovingAverage(xvg,velocity):
+    # assumes comes from pullf.xvg
+    time=xvg['data'][xvg['xaxis label']]
+    force=xvg['data'][xvg['yaxis labels']]
+    dt = time[1] - time[0] # ps
+    N = int(0.1 / velocity / dt)
+    #N=int(10 / dt)
+    move_mean = pd.Series(force.to_numpy().flatten()).rolling(N).mean()
+    integrand = move_mean * dt * velocity
+    work = np.cumsum(integrand)
+    return (move_mean, work, force, time)
+
+def jarzynski(prefix,nums,velocity,temp):
+    thermal = 8.314e-3*temp  # thermal energy KJ/mol
+    num_runs = len(nums)
+    pullf_names = [prefix+str(num)+'_pullf.xvg' for num in nums]
+    xvgs = [read_xvg(n) for n in pullf_names]
+    results = [workBasedOnForceMovingAverage(xvg,velocity) for xvg in xvgs]
+    work = np.stack([res[1] for res in results])
+    A = -thermal*np.log(np.mean(np.exp(-work/thermal),axis=0))
+    return A,results[0][3]
+
 def plot_pull(pullf_file,pullx_file,coord_file,com_file,pull_vec,rate,k):
     f_xvg=read_xvg(pullf_file)
     x_xvg=read_xvg(pullx_file)
