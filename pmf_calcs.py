@@ -55,6 +55,65 @@ def process_pmf_data(prefix,numFrames,k):
     f = delta_x*k # sign is positive because of Newton's 3rd law and Hooke's
     return calcWork3D_Trap(x,f), x, f
 
+def plot_pull(pullf_file,pullx_file,coord_file,com_file,pull_vec,rate,k):
+    f_xvg=read_xvg(pullf_file)
+    x_xvg=read_xvg(pullx_file)
+    c_xvg=read_xvg(coord_file)
+    b_xvg=read_xvg(com_file)
+    t=f_xvg['data']['Time (ps)'].to_numpy().astype(np.float)
+    f=f_xvg['data'].to_numpy().astype(np.float)[:,1:]
+    dx=f/k
+    x=x_xvg['data'].to_numpy().astype(np.float)[:,1:]
+    c=c_xvg['data'].to_numpy().astype(np.float)[:,1:]
+    b=b_xvg['data'].to_numpy().astype(np.float)[:,1:]
+    v=np.array(pull_vec)
+    u=v/np.linalg.norm(v)
+    s=t.reshape((t.shape[0],1))*0.01*u.reshape((1,u.shape[0]))+c[0,:]
+    d = (c-b).dot(u)
+    s2 = d+dx.T
+    s3 = s2.reshape((t.shape[0],1))*u.reshape((1,u.shape[0]))+c[0,:]
+    print(c[1500])
+    s4 = c+dx*u.reshape((1,u.shape[0]))
+    print(s[1500])
+    print(s4[1500])
+    fig1 = plt.figure(1)
+    ax1 = fig1.add_subplot(111)
+    label = 'projection of difference between C18 and bottleneck COM on vector'
+    ax1.plot(t,d,color='k',linestyle='--',label=label)
+    label = 'gromacs produced "x" coordinate'
+    ax1.scatter(t,x,color='b', label=label)
+    label = 'infered position of virtual spring based on force'
+    ax1.scatter(t,s2,color='r', label=label)
+    ax1.set_xlabel('time(ps)')
+    ax1.set_ylabel('x(nm)')
+    ax1.legend(loc = 'best')
+    fig2 = plt.figure(2)
+    ax2 = fig2.add_subplot(111, projection='3d')
+    label = "Position of C18"
+    ax2.scatter(c[:,0], c[:,1], c[:,2],color='r', label=label)
+    label = "Position of bottleneck COM"
+    ax2.scatter(b[:,0], b[:,1], b[:,2],color='k', label=label)
+    label =  "Constant rate along normalized vector rooted at initial C18"
+    ax2.scatter(s[:,0], s[:,1], s[:,2],color='b', label=label)
+    label = "Implied virtual spring position based on gromacs 'x' and 'f'"
+    ax2.scatter(s3[:,0], s3[:,1], s3[:,2],color='c',label=label)
+    label = "Implied virtual spring position based on C18 and 'f'"
+    ax2.scatter(s4[:,0], s4[:,1], s4[:,2],color='m',label=label)
+    ax2.set_xlabel('X(nm)')
+    ax2.set_ylabel('Y(nm)')
+    ax2.set_zlabel('Z(nm)')
+    ax2.legend(loc = 'best')
+    fig3 = plt.figure(3)
+    ax3 = fig3.add_subplot(211)
+    ax3.scatter(t,f,label="gromcs 'f' (KJ/mol/nm)",color="k")
+    ax3.set_ylabel('Force(KJ/mol/nm)')
+    ax3.legend(loc = 'best')
+    ax4 = fig3.add_subplot(212)
+    ax4.scatter(t,dx,label="implied stretch in spring (nm)")
+    ax4.set_xlabel('time(ps)')
+    ax4.set_ylabel('stretch(nm)')
+    ax4.legend(loc = 'best')
+    plt.show()
 
 if __name__ == '__main__':
     prefix = sys.argv[1]
