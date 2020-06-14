@@ -67,14 +67,22 @@ def workBasedOnForceMovingAverage(xvg,velocity):
     work = np.cumsum(integrand)
     return (move_mean, work, force, time)
 
-def jarzynski(prefix,nums,velocity,temp):
+def jarzynski(work,thermal):
+    A = -thermal*np.log(np.mean(np.exp(-work/thermal),axis=0))
+    return A
+
+def normalAverage(work,thermal):
+    W = np.mean(work,axis=0)
+    return W
+
+def averageWork(prefix,nums,velocity,temp,func=jarzynski):
     thermal = 8.314e-3*temp  # thermal energy KJ/mol
     num_runs = len(nums)
     pullf_names = [prefix+str(num)+'_pullf.xvg' for num in nums]
     xvgs = [read_xvg(n) for n in pullf_names]
     results = [workBasedOnForceMovingAverage(xvg,velocity) for xvg in xvgs]
     work = np.stack([res[1] for res in results])
-    A = -thermal*np.log(np.mean(np.exp(-work/thermal),axis=0))
+    A = func(work,thermal)
     return A,results[0][3]
 
 def plot_pull(pullf_file,pullx_file,coord_file,com_file,pull_vec,rate,k):
