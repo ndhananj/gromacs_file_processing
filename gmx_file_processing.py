@@ -213,7 +213,7 @@ def extract_com_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
     output_file,regen=False):
     if(regen or not(os.path.exists(output_file))):
         cmd = "echo "+str(ndx)+" | gmx traj -f "+trj_file+" -s "+struct_file+\
-            '-com -n '+ndx_file+' -ox '+output_file
+            ' -com -n '+ndx_file+' -ox '+output_file
         os.system(cmd)
 
 ################################################################################
