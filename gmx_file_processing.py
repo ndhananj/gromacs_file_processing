@@ -188,7 +188,7 @@ def xvg_ylabel_shift(xvg_data):
 def convert_gro_to_pdb(file_prefix,regen=False):
     gro_file = file_prefix+'.gro'
     pdb_file = file_prefix+'.pdb'
-    if(regen or os.path.exists(pdb_file)):
+    if(regen or not(os.path.exists(pdb_file))):
         cmd = \
           "echo '0' | gmx trjconv -f "+gro_file+' -s '+gro_file+' -o '+pdb_file
         os.system(cmd)
@@ -202,7 +202,7 @@ def get_frames_from_trj(trj_file, struct_file, beg, end, step, \
 
 def extract_position_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
     output_file, beg=None, end=None, dt=None, regen=False):
-    if(regen or os.path.exists(output_file)):
+    if(regen or not(os.path.exists(output_file))):
         cmd = "echo "+str(ndx)+" | gmx trajectory -f "+trj_file+" -s "+struct_file+\
             ' -n '+ndx_file+' -ox '+output_file
         if (beg is not None) and (end is not None) and (dt is not None) :
@@ -211,7 +211,7 @@ def extract_position_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
 
 def extract_com_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
     output_file,regen=False):
-    if(regen or os.path.exists(output_file)):
+    if(regen or npt(os.path.exists(output_file))):
         cmd = "echo "+str(ndx)+" | gmx traj -f "+trj_file+" -s "+struct_file+\
             '-com -n '+ndx_file+' -ox '+output_file
         os.system(cmd)
