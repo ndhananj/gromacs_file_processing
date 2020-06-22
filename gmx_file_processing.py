@@ -185,25 +185,36 @@ def xvg_ylabel_shift(xvg_data):
 # Trajectory conversion functions
 ################################################################################
 
-def convert_gro_to_pdb(file_prefix):
+def convert_gro_to_pdb(file_prefix,regen=False):
     gro_file = file_prefix+'.gro'
     pdb_file = file_prefix+'.pdb'
-    cmd = "echo '0' | gmx trjconv -f "+gro_file+' -s '+gro_file+' -o '+pdb_file
-    os.system(cmd)
+    if(regen or os.path.exists(pdb_file)):
+        cmd = \
+          "echo '0' | gmx trjconv -f "+gro_file+' -s '+gro_file+' -o '+pdb_file
+        os.system(cmd)
 
-def get_frames_from_trj(trj_file, struct_file, beg, end, step, out_prefix):
+def get_frames_from_trj(trj_file, struct_file, beg, end, step, \
+    out_prefix):
     cmd = "echo '0' | gmx trjconv -f "+trj_file+" -s "+struct_file+" -b "+\
         str(beg)+ " -e "+str(end)+" -dt "+\
         str(step)+" -sep -o "+out_prefix+".pdb"
     os.system(cmd)
 
 def extract_position_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
-    output_file, beg=None, end=None, dt=None):
-    cmd = "echo "+str(ndx)+" | gmx trajectory -f "+trj_file+" -s "+struct_file+\
-        ' -n '+ndx_file+' -ox '+output_file
-    if (beg is not None) and (end is not None) and (dt is not None) :
-        cmd+=' -b '+beg+' -e '+end+' -dt '+dt
-    os.system(cmd)
+    output_file, beg=None, end=None, dt=None, regen=False):
+    if(regen or os.path.exists(output_file)):
+        cmd = "echo "+str(ndx)+" | gmx trajectory -f "+trj_file+" -s "+struct_file+\
+            ' -n '+ndx_file+' -ox '+output_file
+        if (beg is not None) and (end is not None) and (dt is not None) :
+            cmd+=' -b '+beg+' -e '+end+' -dt '+dt
+        os.system(cmd)
+
+def extract_com_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
+    output_file,regen=False):
+    if(regen or os.path.exists(output_file)):
+        cmd = "echo "+str(ndx)+" | gmx traj -f "+trj_file+" -s "+struct_file+\
+            '-com -n '+ndx_file+' -ox '+output_file
+        os.system(cmd)
 
 ################################################################################
 # Simulation functions
