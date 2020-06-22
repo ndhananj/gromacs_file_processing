@@ -83,6 +83,28 @@ def concatenate_lists(l):
     return [item for sublist in l for item in sublist]
 
 ################################################################################
+# data frame functions
+################################################################################
+def match_col_in_int_list(df,col,int_list):
+    matches = np.array([df[col].to_numpy().astype(int) == i for i in int_list])
+    return np.any(matches,axis=0)
+
+def match_cols_in_int_list(df,cols,int_list):
+    matches = np.array([match_col_in_int_list(df,col,int_list) for col in cols])
+    return np.any(matches,axis=0)
+
+def get_cols_in_int_list(df,cols,int_list):
+    return df[match_cols_in_int_list(df,cols,int_list)]
+
+def remap_integer_cols(df,cols,mapping):
+    retVal = df.copy()
+    for col in cols:
+       idx_list = df[col].to_numpy().astype(int)
+       retVal[col] = [mapping[i] for i in idx_list]
+    return retVal
+
+
+################################################################################
 # pdb related functions
 ################################################################################
 # the input is a biopandas read and a set of atom ids
@@ -223,7 +245,7 @@ def read_itp(filename):
     num_lines = len(lines)
     lines_range = range(num_lines)
     # find the headers
-    header_re = re.compile('\[\s*(.*?)\s*\]')
+    header_re = re.compile('\s*\[\s*(.*?)\s*\]')
     header_lines = [i for i in lines_range if header_re.match(lines[i])]
     headers = [header_re.match(lines[i]).group(1) for i in header_lines]
     num_headers = len(headers)
