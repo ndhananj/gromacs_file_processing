@@ -235,6 +235,21 @@ def mdrun(tpr_file,prefix):
 ################################################################################
 # Forcefield and Topology related functions
 ################################################################################
+
+# make use of pdb2gmx create topologies and gro files
+def make_neutral_peptide(input,choices):
+    printf_str='\n'.join([str(c) for c in choices])
+    [base,ext] = input.split('.')
+    output = base+'.gro'
+    top = base+'.top'
+    itp = base+'_posre.itp'
+    cmd = 'printf "' + printf_str + '" | gmx pdb2gmx -f '+ input + \
+        ' -o ' + output + ' -p ' + top + ' -i ' + itp + \
+        ' -chainsep id_or_ter -asp -ignh -posrefc 25000 -water none' + \
+        ' -ff charmm36 -ter'
+    print(cmd)
+    os.system(cmd)
+
 # assumes there is at least 1 semicolon
 def interpret_itp_comment_parts(parts):
     semicol_idx = [i for i in range(len(parts)) if parts[i]==';']
