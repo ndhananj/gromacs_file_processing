@@ -250,6 +250,25 @@ def make_neutral_peptide(input,choices):
     print(cmd)
     os.system(cmd)
 
+# convert a top to an itp by stripping forcfield and system information
+def convert_top_to_itp(input):
+    [base,ext]=input.split('.')
+    output = base + '.itp'
+    f = open(input, "r")
+    lines=f.readlines()
+    f.close()
+    start_re = re.compile('\s*\[\s*moleculetype\s*\]')
+    end_re = re.compile('\s*\[\s*system\s*\]')
+    name_re = re.compile('\s*\;\s*Name')
+    line_iter = range(len(lines))
+    start = next(i for i in line_iter if start_re.match(lines[i]))
+    end = next(i for i in line_iter if end_re.match(lines[i]))
+    name_idx = next(i for i in line_iter if name_re.match(lines[i])) + 1
+    lines[name_idx] = base+"            3\n"
+    f2 = open(output,"w")
+    f2.writelines(lines[start:end])
+    f2.close()
+
 # assumes there is at least 1 semicolon
 def interpret_itp_comment_parts(parts):
     semicol_idx = [i for i in range(len(parts)) if parts[i]==';']
