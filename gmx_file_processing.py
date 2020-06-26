@@ -216,6 +216,13 @@ def extract_com_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
             ' -com -n '+ndx_file+' -ox '+output_file
         os.system(cmd)
 
+def dump_snapshot(trj_file,struct_file,ndx_file,ndx,time,\
+    output_file,regen=False):
+    if(regen or not(os.path.exists(output_file))):
+        cmd = "echo "+str(ndx)+" | gmx trjconv -f "+trj_file+' -dump '+time+\
+            " -s "+struct_file+ ' -n '+ndx_file+' -ox '+output_file
+        os.system(cmd)
+
 ################################################################################
 # Simulation functions
 ################################################################################
@@ -452,3 +459,44 @@ def remove_itp_atoms(itp_dict, atoms_to_remove):
     itp_dict = \
         replace_relavent_sections(itp_dict,relevant_headers,renumbered_sections)
     return itp_dict
+
+# Set up monomer
+def set_up_monomer(filename):
+    [base,ext] = filename.split('.')
+    mon_filename = base+'_mon.itp'
+    cmd = "grep -v '; residue' " + filename + \
+        " | grep -v '#' | grep -v '; Include' " + \
+        " | perl -ne 's/\;\s*qtot.*$//; print' >" + mon_filename
+    os.system(cmd)
+
+# Fix termini charge in monomer
+def fix_monomer_ter(itp_dict):
+    ret_val = itp_dict.copy()
+    ret_df = ret_val['atoms'][0].copy()
+    nh1 = ret_df['nr']=='1'
+    hn  = ret_df['nr']=='2'
+    ct1 = ret_df['nr']=='4'
+    ret_df.loc[nh1,'type']='NH1'
+    ret_df.loc[nh1,'charge']=-0.47
+    ret_df.loc[hn,'atom']='HN'
+    ret_df.loc[hn,'charge']=0.31
+    ret_df.loc[ct1,'charge']=0.07
+    ht1 = ret_df['atom']=='HT1'
+    ht2 = ret_df['atom']=='HT2'
+    ret_df.loc[ht1,'type']='HA'
+    ret_df.loc[ht2,'type']='HA'
+    ret_df.loc[ht1,'charge']=0.09
+    ret_df.loc[ht2,'charge']=0.09
+    ret_val['atoms'][0]=ret_df
+    return remove_itp_atoms(ret_val.copy(),[3])
+
+# add inclusion of posre
+def add_posre(file):
+    [base,ext] = file.split('.')
+    f=open(file,"a+")
+    f.writelines(["\n",
+        '; Include Position restraint file'+"\n",
+        '#ifdef POSRES'+"\n",
+        '#include "'+base+'_posre.itp"'+"\n",
+        '#endif'+"\n"])
+    f.close()
