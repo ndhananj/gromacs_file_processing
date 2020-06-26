@@ -85,6 +85,7 @@ def averageWork(prefix,nums,velocity,temp,func=jarzynski):
     A = func(work,thermal)
     return A,results[0][3]
 
+# Plotting function for debugging pull
 def plot_pull(pullf_file,pullx_file,coord_file,com_file,pull_vec,rate,k):
     f_xvg=read_xvg(pullf_file)
     x_xvg=read_xvg(pullx_file)
@@ -144,6 +145,49 @@ def plot_pull(pullf_file,pullx_file,coord_file,com_file,pull_vec,rate,k):
     ax4.set_ylabel('stretch(nm)')
     ax4.legend(loc = 'best')
     plt.show()
+
+# assumes raw gromacs units (nm for distance and coordinates)
+def find_last_low_distance(ref_df,distance,beg_dist=1.0,dist_step=0.01):
+    dist=beg_dist
+    while(not(ref_df[distance<dist].empty)):
+        time = ref_df[distance<dist].iloc[-1]['Time (ps)']
+        dist-=dist_step
+    return time
+
+# find transition state_time based on com xvg's of relevant sections
+def find_transition_state_time(bn_traj,q_traj):
+    bn=read_xvg(bn_traj)
+    q=read_xvg(q_traj)
+    distance=np.linalg.norm(bn['data']-q['data'],axis=1)
+    return find_last_low_distance(q['data'],distance)
+
+# very specific to Q molecules passing through bottleneck
+def generate_com_files(trj_file,struct_file,ndx_file,\
+    bn_ndx,q_ndx,regen=False):
+    [base,ext] = trj_file.split('.')
+    (bn_file, q_file) = (base+'_bn_com.xvg', base+'q_com.xvg')
+    extract_com_from_traj_using_index(trj_file,struct_file,ndx_file,bn_ndx,\
+        bn_file,regen)
+    extract_com_from_traj_using_index(trj_file,struct_file,ndx_file,q_ndx,\
+        q_file,regen)
+    return (bn_file, q_file)
+
+# generate tansition states
+def generate_transition_states(trj_prefix,struct_file,ndx_file,\
+    bn_ndx,q_ndx,bn_q_ndx,regen=False):
+    files=glob.glob(trj_prefix+'*.xtc')
+    bases=[file.split('.')[0] for file in files]
+    com_files = \
+        [ generate_com_files(file,struct_file,ndx_file,bn_ndx,q_ndx,regen) \
+            for file in files ]
+    times = [find_transition_state_time(bn_traj,q_traj) \
+            for (bn_traj,q_traj) in com_files ]
+    str_times = [str(time).replace('.','p') for time in times]
+
+    for i in range(len(files)):
+        output = bases[i]+"_"+str_times[i]+".gro"
+        dump_snapshot(files[i],struct_file,ndx_file,bn_q_ndx,times[i],output)
+
 
 if __name__ == '__main__':
     prefix = sys.argv[1]
