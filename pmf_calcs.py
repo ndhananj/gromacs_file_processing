@@ -165,9 +165,9 @@ def find_transition_state_time(bn_traj,q_traj):
 
 # very specific to Q molecules passing through bottleneck
 def generate_com_files(trj_file,struct_file,ndx_file,\
-    bn_ndx,q_ndx,regen=False):
+    bn_ndx,q_ndx,q_suff='q_com',regen=False):
     [base,ext] = trj_file.split('.')
-    (bn_file, q_file) = (base+'_bn_com.xvg', base+'q_com.xvg')
+    (bn_file, q_file) = (base+'_bn_com.xvg', base+q_suff+'.xvg')
     extract_com_from_traj_using_index(trj_file,struct_file,ndx_file,bn_ndx,\
         bn_file,regen)
     extract_com_from_traj_using_index(trj_file,struct_file,ndx_file,q_ndx,\
@@ -176,11 +176,13 @@ def generate_com_files(trj_file,struct_file,ndx_file,\
 
 # generate tansition states
 def generate_transition_states(trj_prefix,struct_file,ndx_file,\
-    bn_ndx,q_ndx,bn_q_ndx,indeces=range(1,31),regen=False):
+    bn_ndx,q_ndx,bn_q_ndx,indeces=range(1,31),\
+    con="_",q_suff='q_com',regen=False):
     files=[trj_prefix+str(i)+'.xtc' for i in indeces]
     bases=[file.split('.')[0] for file in files]
     com_files = \
-        [ generate_com_files(file,struct_file,ndx_file,bn_ndx,q_ndx,regen) \
+        [ generate_com_files(\
+            file,struct_file,ndx_file,bn_ndx,q_ndx,q_suff,regen) \
             for file in files ]
     t_n_d = [find_transition_state_time(bn_traj,q_traj) \
             for (bn_traj,q_traj) in com_files ]
@@ -188,7 +190,7 @@ def generate_transition_states(trj_prefix,struct_file,ndx_file,\
     str_times = [str(time).replace('.','p') for time in times]
 
     for i in range(len(files)):
-        output = bases[i]+"_"+str_times[i]+".gro"
+        output = bases[i]+con+str_times[i]+".gro"
         dump_snapshot(files[i],struct_file,ndx_file,bn_q_ndx,times[i],output)
 
     return np.array([pair[1] for pair in t_n_d])
