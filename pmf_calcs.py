@@ -151,8 +151,10 @@ def find_last_low_distance(ref_df,distance,beg_dist=1.0,dist_step=0.01):
     dist=beg_dist
     while(not(ref_df[distance<dist].empty)):
         time = ref_df[distance<dist].iloc[-1]['Time (ps)']
+        d = distance[distance<dist][-1]
         dist-=dist_step
-    return time
+    print(d)
+    return (time,d)
 
 # find transition state_time based on com xvg's of relevant sections
 def find_transition_state_time(bn_traj,q_traj):
@@ -174,19 +176,64 @@ def generate_com_files(trj_file,struct_file,ndx_file,\
 
 # generate tansition states
 def generate_transition_states(trj_prefix,struct_file,ndx_file,\
-    bn_ndx,q_ndx,bn_q_ndx,regen=False):
-    files=glob.glob(trj_prefix+'*.xtc')
+    bn_ndx,q_ndx,bn_q_ndx,indeces=range(1,31),regen=False):
+    files=[trj_prefix+str(i)+'.xtc' for i in indeces]
     bases=[file.split('.')[0] for file in files]
     com_files = \
         [ generate_com_files(file,struct_file,ndx_file,bn_ndx,q_ndx,regen) \
             for file in files ]
-    times = [find_transition_state_time(bn_traj,q_traj) \
+    t_n_d = [find_transition_state_time(bn_traj,q_traj) \
             for (bn_traj,q_traj) in com_files ]
+    times = [pair[0] for pair in t_n_d]
     str_times = [str(time).replace('.','p') for time in times]
 
     for i in range(len(files)):
         output = bases[i]+"_"+str_times[i]+".gro"
         dump_snapshot(files[i],struct_file,ndx_file,bn_q_ndx,times[i],output)
+
+    return np.array([pair[1] for pair in t_n_d])
+
+# find the times when force drop times happen
+def find_max_force_drop(pullf_file,T1=100.0,T2=10.0,mul=20,window=1,plot=True):
+    d=read_xvg(pullf_file)['data']
+    t=d['Time (ps)']
+    f=d['Force (kJ/mol/nm)']
+    N1 = int(T1*mul)
+    N2 = int(T2*mul)
+    slow_mean = pd.Series(f.to_numpy().flatten()).rolling(N1).mean()
+    fast_mean = pd.Series(f.to_numpy().flatten()).rolling(N2).mean()
+    macd = slow_mean-fast_mean
+    idx_macd = macd.idxmax()
+    print("macd:",idx_macd)
+    idx=f[idx_macd-N2*window:idx_macd].idxmax()
+    print(idx)
+    time = t[idx]
+    print(time)
+    if plot :
+        fig = plt.figure(1)
+        ax1 = fig.add_subplot(211)
+        ax1.scatter(t,f)
+        ax1.plot(t,slow_mean,color='r')
+        ax1.plot(t,fast_mean,color='k')
+        # time step indicator
+        ax1.axvline(time, color='k')
+        plt.ylabel('Force (kJ/mol/nm)')
+        ax2 =  fig.add_subplot(212)
+        ax2.plot(t,macd,color='r')
+        plt.xlabel('Time (ps)')
+        plt.ylabel('Force (kJ/mol/nm)')
+        plt.show()
+    return time, idx
+
+# dump force drop states
+def dump_max_force_drop(prefix,struct_file,ndx_file,ndx,plot=False):
+    pullf_file = prefix+"_pullf.xvg"
+    time, idx = find_max_force_drop(pullf_file,plot=plot)
+    str_time = str(time).replace('.','p')
+    output = prefix+"_fd_"+str_time+".gro"
+    xtc = prefix+'.xtc'
+    dump_snapshot(xtc,struct_file,ndx_file,ndx,time,output)
+    return time, idx
 
 
 if __name__ == '__main__':
