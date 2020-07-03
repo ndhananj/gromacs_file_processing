@@ -16,6 +16,8 @@ import re
 
 import os
 
+import glob
+
 from biopandas.pdb import PandasPdb
 
 
@@ -219,8 +221,9 @@ def extract_com_from_traj_using_index(trj_file,struct_file,ndx_file,ndx,\
 def dump_snapshot(trj_file,struct_file,ndx_file,ndx,time,\
     output_file,regen=False):
     if(regen or not(os.path.exists(output_file))):
-        cmd = "echo "+str(ndx)+" | gmx trjconv -f "+trj_file+' -dump '+time+\
-            " -s "+struct_file+ ' -n '+ndx_file+' -ox '+output_file
+        cmd = "echo "+str(ndx)+" | gmx trjconv -f "+trj_file+\
+            ' -dump '+str(time)+\
+            " -s "+struct_file+ ' -n '+ndx_file+' -o '+output_file
         os.system(cmd)
 
 ################################################################################
@@ -235,9 +238,10 @@ def grompp(mdp_file,init_struct_file,top_file,ndx_file,output_file):
         ' -p '+top_file+' -n '+ndx_file+' -o '+output_file
     os.system(cmd)
 
-def mdrun(tpr_file,prefix):
-    cmd = 'gmx mdrun -s '+tpr_file+' -deffnm '+prefix
-    os.system(cmd)
+def mdrun(tpr_file,prefix,regen=False):
+    if(regen or not(os.path.exists(prefix+'.xtc'))):
+        cmd = 'gmx mdrun -s '+tpr_file+' -deffnm '+prefix
+        os.system(cmd)
 
 ################################################################################
 # Forcefield and Topology related functions
