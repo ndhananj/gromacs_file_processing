@@ -504,3 +504,32 @@ def add_posre(file):
         '#include "'+base+'_posre.itp"'+"\n",
         '#endif'+"\n"])
     f.close()
+
+################################################################################
+# ndx functions
+################################################################################
+
+def process_ndx_lines(lines_to_process):
+    return [int(i) for i in \
+        concatenate_lists([line.split() for line in lines_to_process])]
+
+def read_ndx(filename):
+    # read and split data into parts
+    f = open(filename, 'r+')
+    # get lines
+    lines = f.read().split("\n")
+    num_lines = len(lines)
+    lines_range = range(num_lines)
+    # find the headers
+    header_re = re.compile('\s*\[\s*(.*?)\s*\]')
+    header_lines = [i for i in lines_range if header_re.match(lines[i])]
+    headers = [header_re.match(lines[i]).group(1) for i in header_lines]
+    num_headers = len(headers)
+    header_range = range(num_headers)
+    retVal = {header:[] for header in headers}
+    int_re = re.compile('\d+')
+    for i in header_range:
+        lines_to_process = lines[header_lines[i]+1:header_lines[i+1]] \
+            if(i+1<num_headers) else lines[header_lines[i]+1:]
+        retVal[headers[i]] = process_ndx_lines(lines_to_process)
+    return retVal
