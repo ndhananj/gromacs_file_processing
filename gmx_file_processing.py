@@ -136,12 +136,16 @@ def read_xvg(filename):
     # read and split data into parts
     f = open(filename, 'r+')
     lines = f.read().split("\n")
+    print("xvg read in")
     num_lines = len(lines)
     comments = [lines[i] for i in range(num_lines-1) if lines[i][0]=='#']
     params = [lines[i] for i in range(num_lines-1) if lines[i][0]=='@']
-    data = [lines[i].split() \
-        for i in range(num_lines-1) if lines[i][0] not in ['@','#']]
-    data_array = np.array(data).astype(np.float)
+    print("xvg header processed")
+    data = (np.array(lines[i].split()).astype(np.float) \
+        for i in range(num_lines-1) if lines[i][0] not in ['@','#'])
+    print("data lines split")
+    data_array = np.array(list(data))
+    print("xvg data extracted")
     # process and interpret the parts
     num_y_data_cols = data_array.shape[1]-1
     processed_params = process_xvg_params(params)
@@ -150,10 +154,10 @@ def read_xvg(filename):
     num_y_labels = len(y_labels)
     num_new_labels = num_y_data_cols-num_y_labels
     if(num_new_labels>0): # if there aren't enough labels
-        print("Extending labels to "+str(num_y_data_cols)+" ...")
+        #print("Extending labels to "+str(num_y_data_cols)+" ...")
         new_labels = [y_labels[-1]+"_"+str(i) for i in range(num_new_labels)]
         y_labels.extend(new_labels)
-        print(y_labels)
+        #print(y_labels)
     num_y_labels = len(y_labels)
     # create dictionary to make data frame
     # start with y labels
@@ -165,6 +169,7 @@ def read_xvg(filename):
     data_dict = {k:v for (k,v) in data_pairs}
     # turn into a data frame
     df = pd.DataFrame(data=data_dict)
+    print("xvg interpreted")
     return {'data':df, 'xaxis label':x_label, 'yaxis labels':y_labels}
 
 ########
