@@ -134,22 +134,15 @@ def process_xvg_params(params):
 
 def read_xvg_lines(filename):
     # read and split data into parts
-    f = open(filename, 'r+')
-    lines = f.read().split("\n")
-    print("xvg read in")
-    return lines
+    print("Reading xvg")
+    return open(filename, 'r+').readlines()
 
-def get_xvg_data_array_from_lines(lines,num_lines):
-    data = (np.array(lines[i].split()).astype(np.float) \
-        for i in range(num_lines-1) if lines[i][0] not in ['@','#'])
-    print("data lines split")
-    data_array = np.array(list(data))
-    print("xvg data extracted")
-    return data_array
+def get_xvg_data_array_from_lines(lines):
+    return np.array(list(np.array(line.split()).astype(np.float) \
+        for line in lines if line[0] not in ['@','#']))
 
 def get_xvg_data_array_from_file(filename):
-    lines = read_xvg_lines(filename)
-    return get_xvg_data_array_from_lines(lines, len(lines))
+    return get_xvg_data_array_from_lines(open(filename, 'r+'))
 
 def read_xvg(filename):
     lines = read_xvg_lines(filename)
