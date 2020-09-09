@@ -132,20 +132,32 @@ def process_xvg_params(params):
     processed_params['yaxis  label'] = y_axis_labels
     return processed_params
 
-def read_xvg(filename):
+def read_xvg_lines(filename):
     # read and split data into parts
     f = open(filename, 'r+')
     lines = f.read().split("\n")
     print("xvg read in")
-    num_lines = len(lines)
-    comments = [lines[i] for i in range(num_lines-1) if lines[i][0]=='#']
-    params = [lines[i] for i in range(num_lines-1) if lines[i][0]=='@']
-    print("xvg header processed")
+    return lines
+
+def get_xvg_data_array_from_lines(lines,num_lines):
     data = (np.array(lines[i].split()).astype(np.float) \
         for i in range(num_lines-1) if lines[i][0] not in ['@','#'])
     print("data lines split")
     data_array = np.array(list(data))
     print("xvg data extracted")
+    return data_array
+
+def get_xvg_data_array_from_file(filename):
+    lines = read_xvg_lines(filename)
+    return get_xvg_data_array_from_lines(lines, len(lines))
+
+def read_xvg(filename):
+    lines = read_xvg_lines(filename)
+    num_lines = len(lines)
+    comments = (lines[i] for i in range(num_lines-1) if lines[i][0]=='#')
+    params = (lines[i] for i in range(num_lines-1) if lines[i][0]=='@')
+    print("xvg header processed")
+    data_array = get_xvg_data_array_from_lines(lines,num_lines)
     # process and interpret the parts
     num_y_data_cols = data_array.shape[1]-1
     processed_params = process_xvg_params(params)
@@ -159,6 +171,7 @@ def read_xvg(filename):
         y_labels.extend(new_labels)
         #print(y_labels)
     num_y_labels = len(y_labels)
+    print("dependent variables found in xvg")
     # create dictionary to make data frame
     # start with y labels
     data_pairs = [(y_labels[i], data_array[:,i+1]) for i in range(num_y_labels)]
@@ -167,6 +180,7 @@ def read_xvg(filename):
     data_pairs.insert(0,(x_label,data_array[:,0]))
     # turn intoa dictionary
     data_dict = {k:v for (k,v) in data_pairs}
+    print("data dictionary prepared")
     # turn into a data frame
     df = pd.DataFrame(data=data_dict)
     print("xvg interpreted")
